@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>KRK Multi-Services — Boutique informatique</title>
+<meta name="description" content="Ordinateurs portables, de bureau et cartes PVC à Bingerville. Livraison partout en Côte d'Ivoire.">
+<meta name="theme-color" content="#0a1a44"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="img/icon-192.png">
+<style>
+:root{--n:#0a1a44;--n2:#12296b;--g:#f5b800;--bg:#f4f6fb;--t:#0f172a;--c:#fff;--m:#64748b;--b:#e2e8f0}
+@media(prefers-color-scheme:dark){:root{--bg:#070f26;--t:#eef2ff;--c:#101c40;--m:#94a3b8;--b:#1e2d5c}}
+*{box-sizing:border-box;margin:0}body{font:15px/1.5 system-ui,sans-serif;background:var(--bg);color:var(--t);padding-bottom:70px}
+a{color:inherit}header{position:sticky;top:0;z-index:9;background:var(--n);color:#fff;display:flex;align-items:center;gap:12px;padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+header img{height:38px;border-radius:8px;background:#fff}header b{flex:1}
+.btn{border:0;border-radius:12px;padding:10px 16px;font-weight:700;cursor:pointer;background:var(--g);color:var(--n);font-size:14px}.btn.s{background:var(--c);color:var(--t);border:1px solid var(--b)}.btn.r{background:#dc2626;color:#fff}
+.hero{background:linear-gradient(135deg,var(--n),var(--n2));color:#fff;padding:40px 20px;text-align:center}.hero h1{font-size:clamp(26px,6vw,44px);line-height:1.15}.hero h1 span{color:var(--g)}.hero p{margin:12px auto 20px;max-width:520px;opacity:.9}
+.perks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;max-width:900px;margin:-24px auto 0;padding:0 16px}.perks div{background:var(--c);border-radius:14px;padding:12px;text-align:center;font-size:13px;box-shadow:0 4px 14px #0002}
+main{max-width:1000px;margin:auto;padding:20px 16px}h2{margin:18px 0 12px}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px}.chip{white-space:nowrap;border:1px solid var(--b);background:var(--c);color:var(--t);border-radius:99px;padding:6px 14px;cursor:pointer}.chip.on{background:var(--n);color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+.card{background:var(--c);border-radius:18px;overflow:hidden;box-shadow:0 4px 18px #0001;display:flex;flex-direction:column}.card img{width:100%;aspect-ratio:4/3;object-fit:cover;background:#dde}.card div{padding:14px;display:flex;flex-direction:column;gap:6px;flex:1}.card small{color:var(--m)}.price{font-size:20px;font-weight:800}.old{text-decoration:line-through;color:var(--m);font-size:13px;margin-left:6px}
+.box{background:var(--c);border-radius:16px;padding:16px;margin-bottom:14px;border:1px solid var(--b)}
+input,select,textarea{width:100%;padding:11px;border-radius:10px;border:1px solid var(--b);background:var(--bg);color:var(--t);font:inherit;margin:4px 0 10px}label{font-size:13px;color:var(--m)}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--n);padding-bottom:env(safe-area-inset-bottom,0px);z-index:9}nav a{flex:1;text-align:center;color:#fff;padding:12px 4px;text-decoration:none;font-size:12px}nav a.on{color:var(--g)}
+.tag{display:inline-block;padding:2px 10px;border-radius:99px;background:var(--b);font-size:12px}
+.tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}.wa{position:fixed;right:14px;bottom:80px;background:#25d366;color:#fff;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;font-size:26px;text-decoration:none;z-index:8;box-shadow:0 4px 14px #0004}
+#toast{position:fixed;top:70px;left:50%;transform:translateX(-50%);background:var(--g);color:var(--n);padding:10px 18px;border-radius:12px;font-weight:700;display:none;z-index:20}
+</style></head><body>
+<header><img src="img/logo.jpg" alt="KRK"><b>KRK Multi-Services</b><button class="btn s" id="share">Partager</button></header>
+<div id="app"></div><div id="toast"></div>
+<a class="wa" id="wa" target="_blank" rel="noopener">💬</a>
+<nav><a href="#/">Boutique</a><a href="#/cart" id="nc">Panier</a><a href="#/orders">Commandes</a><a href="#/account" id="na">Compte</a></nav>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script>
+const $=s=>document.querySelector(s),F=n=>Number(n||0).toLocaleString('fr-FR')+' FCFA',E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const sb=supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_KEY);
+let S={user:null,prof:null,prods:[],zones:[],cart:{},cat:'Tous',tab:'products'};
+try{S.cart=JSON.parse(localStorage.getItem('krkcart')||'{}')}catch(e){}
+const save=()=>{try{localStorage.setItem('krkcart',JSON.stringify(S.cart))}catch(e){}$('#nc').textContent='Panier'+(Object.keys(S.cart).length?' ('+Object.values(S.cart).reduce((a,b)=>a+b,0)+')':'')};
+const toast=m=>{const t=$('#toast');t.textContent=m;t.style.display='block';setTimeout(()=>t.style.display='none',2500)};
+const isAdmin=()=>S.prof?.role==='admin';
+$('#wa').href='https://wa.me/'+CFG.WHATSAPP;
+$('#share').onclick=()=>{const d={title:'KRK Multi-Services',text:'Ordinateurs & cartes PVC — Bingerville',url:location.origin};navigator.share?navigator.share(d).catch(()=>{}):(navigator.clipboard.writeText(d.url),toast('Lien copié'))};
+
+async function load(){
+ const[{data:p},{data:z}]=await Promise.all([sb.from('products').select('*').order('created_at',{ascending:false}),sb.from('zones').select('*').order('fee')]);
+ S.prods=p||[];S.zones=z||[];
+ const{data:{session}}=await sb.auth.getSession();S.user=session?.user||null;
+ if(S.user){const{data}=await sb.from('profiles').select('*').eq('id',S.user.id).single();S.prof=data}
+ $('#na').textContent=S.user?(isAdmin()?'Admin':'Compte'):'Connexion';route();
+}
+function route(){const h=location.hash.slice(2)||'';document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#/'+h));
+ ({'':shop,cart,orders,account,admin})[h]?.call?.()||shop();scrollTo(0,0)}
+addEventListener('hashchange',route);
+
+function shop(){
+ const cats=['Tous',...new Set(S.prods.map(p=>p.category))],list=S.prods.filter(p=>S.cat==='Tous'||p.category===S.cat);
+ $('#app').innerHTML=`<div class="hero"><h1>La technologie <span>à votre portée</span></h1><p>Ordinateurs portables, de bureau et cartes PVC. Produits originaux, livraison rapide partout en Côte d'Ivoire.</p><a class="btn" href="#cat" onclick="document.getElementById('cat').scrollIntoView({behavior:'smooth'});return false">Voir les produits</a></div>
+ <div class="perks"><div>✅ 100% originaux</div><div>🚚 Livraison partout en CI</div><div>🎧 Conseil personnalisé</div><div>💰 Meilleur rapport qualité-prix</div></div>
+ <main id="cat"><div class="chips">${cats.map(c=>`<button class="chip ${c===S.cat?'on':''}" onclick="S.cat='${E(c).replace(/'/g,'')}';shop()">${E(c)}</button>`).join('')}</div><h2>Nos produits</h2>
+ <div class="grid">${list.map(p=>`<div class="card"><img loading="lazy" src="${E(p.image_url)}" alt="${E(p.name)}"><div><small>${E(p.category)}</small><b>${E(p.name)}</b><small>${E(p.description)}</small><span class="price">${p.price?F(p.price):'Sur devis'}${p.old_price?`<span class="old">${F(p.old_price)}</span>`:''}</span><span style="flex:1"></span>
+ ${p.stock>0?(p.price?`<button class="btn" onclick="add('${p.id}')">Ajouter au panier</button>`:`<a class="btn" style="text-align:center;text-decoration:none" target="_blank" href="https://wa.me/${CFG.WHATSAPP}?text=${encodeURIComponent('Bonjour, je souhaite un devis pour : '+p.name)}">Demander un prix</a>`):'<span class="tag">Rupture de stock</span>'}</div></div>`).join('')||'<p>Aucun produit.</p>'}</div>
+ <div class="box" style="margin-top:24px"><b>📍 Bingerville SICOGI 1</b><br>📞 +225 0709274992 / 0544718246<br>✉️ krk.multiservices01@gmail.com</div></main>`}
+function add(id){S.cart[id]=(S.cart[id]||0)+1;save();toast('Ajouté au panier')}
+function qty(id,d){S.cart[id]=(S.cart[id]||0)+d;if(S.cart[id]<=0)delete S.cart[id];save();cart()}
+const items=()=>Object.entries(S.cart).map(([id,q])=>({p:S.prods.find(x=>x.id===id),q})).filter(x=>x.p);
+function cart(){
+ const it=items(),sub=it.reduce((a,x)=>a+x.p.price*x.q,0);
+ if(!it.length){$('#app').innerHTML='<main><h2>Panier</h2><div class="box">Votre panier est vide.</div></main>';return}
+ $('#app').innerHTML=`<main><h2>Panier</h2>${it.map(x=>`<div class="box row"><div><b>${E(x.p.name)}</b><br>${F(x.p.price)}</div><div><button class="btn s" onclick="qty('${x.p.id}',-1)">−</button> <b>${x.q}</b> <button class="btn s" onclick="qty('${x.p.id}',1)">+</button></div></div>`).join('')}
+ <div class="box"><h3>Livraison & paiement</h3>
+ <label>Nom complet</label><input id="o_n" value="${E(S.prof?.full_name)}"><label>Téléphone</label><input id="o_p" type="tel" value="${E(S.prof?.phone)}"><label>Zone de livraison</label>
+ <select id="o_z" onchange="tot(${sub})">${S.zones.map(z=>`<option value="${z.id}" data-f="${z.fee}">${E(z.name)} — ${z.fee?F(z.fee):'Gratuite'}</option>`).join('')}</select>
+ <label>Adresse / repère</label><textarea id="o_a" rows="2"></textarea><label>Mode de paiement</label>
+ <select id="o_m" onchange="pm()"><option value="livraison">Paiement à la livraison</option><option value="wave">Wave</option><option value="orange">Orange Money</option><option value="mtn">MTN MoMo</option></select><div id="o_i"></div>
+ <h3 id="o_t"></h3><button class="btn" style="width:100%" onclick="order()">Confirmer la commande</button></div></main>`;tot(sub);pm()}
+function fee(){const s=$('#o_z');return Number(s?.selectedOptions[0]?.dataset.f||0)}
+function tot(sub){$('#o_t').textContent='Total : '+F(sub+fee())}
+function pm(){const m=$('#o_m').value;$('#o_i').innerHTML=m==='livraison'?'':`<div class="box">Envoyez le montant total au <b>${E(CFG.PAY[m])}</b> puis saisissez la référence de la transaction :<input id="o_r" placeholder="Référence / ID transaction"></div>`}
+async function order(){
+ if(!S.user){toast('Connectez-vous pour commander');location.hash='#/account';return}
+ const it=items(),sub=it.reduce((a,x)=>a+x.p.price*x.q,0),z=S.zones.find(z=>z.id===$('#o_z').value),m=$('#o_m').value,r=$('#o_r')?.value.trim();
+ if(!$('#o_n').value||!$('#o_p').value||!$('#o_a').value)return toast('Complétez vos informations');
+ if(m!=='livraison'&&!r)return toast('Saisissez la référence de paiement');
+ const o={user_id:S.user.id,name:$('#o_n').value,phone:$('#o_p').value,address:$('#o_a').value,zone:z?.name,fee:z?.fee||0,items:it.map(x=>({id:x.p.id,name:x.p.name,price:x.p.price,q:x.q})),total:sub+(z?.fee||0),method:m,pay_ref:r||null};
+ const{error}=await sb.from('orders').insert(o);if(error)return toast('Erreur : '+error.message);
+ S.cart={};save();toast('Commande envoyée ✔');
+ window.open('https://wa.me/'+CFG.WHATSAPP+'?text='+encodeURIComponent('Nouvelle commande KRK de '+o.name+' — '+F(o.total)+' ('+m+')'),'_blank');location.hash='#/orders'}
+async function orders(){
+ if(!S.user){location.hash='#/account';return}
+ const{data}=await sb.from('orders').select('*').eq('user_id',S.user.id).order('created_at',{ascending:false});
+ $('#app').innerHTML=`<main><h2>Mes commandes</h2>${(data||[]).map(o=>`<div class="box"><div class="row"><b>${F(o.total)}</b><span class="tag">${E(o.status)}</span></div><small>${new Date(o.created_at).toLocaleString('fr-FR')} · ${E(o.method)}</small><br>${o.items.map(i=>E(i.name)+' ×'+i.q).join(', ')}</div>`).join('')||'<div class="box">Aucune commande.</div>'}</main>`}
+
+function account(){
+ if(S.user){$('#app').innerHTML=`<main><h2>Mon compte</h2><div class="box"><b>${E(S.prof?.full_name)}</b><br>${E(S.user.email)}<br>${E(S.prof?.phone)}<br><br>${isAdmin()?'<a class="btn" href="#/admin" style="text-decoration:none">Espace administrateur</a> ':''}<button class="btn s" onclick="sb.auth.signOut().then(()=>{S.user=S.prof=null;$('#na').textContent='Connexion';location.hash='#/'})">Déconnexion</button></div></main>`;return}
+ let up=false;const draw=()=>{$('#app').innerHTML=`<main><h2>${up?'Créer un compte':'Connexion'}</h2><div class="box">${up?'<label>Nom complet</label><input id="a_n"><label>Téléphone</label><input id="a_p" type="tel">':''}<label>Email</label><input id="a_e" type="email"><label>Mot de passe (6 caractères min.)</label><input id="a_w" type="password"><button class="btn" style="width:100%" id="a_go">${up?'S\'inscrire':'Se connecter'}</button><p style="margin-top:12px"><a href="#" id="a_sw">${up?'J\'ai déjà un compte':'Pas de compte ? Inscrivez-vous'}</a></p></div></main>`;
+ $('#a_sw').onclick=e=>{e.preventDefault();up=!up;draw()};
+ $('#a_go').onclick=async()=>{const email=$('#a_e').value,password=$('#a_w').value;
+  const r=up?await sb.auth.signUp({email,password,options:{data:{full_name:$('#a_n').value,phone:$('#a_p').value}}}):await sb.auth.signInWithPassword({email,password});
+  if(r.error)return toast(r.error.message);if(up&&!r.data.session)return toast('Vérifiez votre email pour confirmer');await load();location.hash='#/'}};draw()}
+
+async function admin(){
+ if(!isAdmin()){location.hash='#/account';return}
+ const T=S.tab,tabs=[['products','Produits'],['orders','Commandes'],['zones','Livraisons']];
+ let body='';
+ if(T==='products')body=`<button class="btn" onclick="pform()">+ Nouveau produit</button><div id="pf"></div>`+S.prods.map(p=>`<div class="box row"><div><b>${E(p.name)}</b> ${p.active?'':'<span class="tag">masqué</span>'}<br>${F(p.price)} · stock ${p.stock}</div><div><button class="btn s" onclick="pform('${p.id}')">Modifier</button> <button class="btn r" onclick="del('products','${p.id}')">Suppr.</button></div></div>`).join('');
+ if(T==='orders'){const{data}=await sb.from('orders').select('*').order('created_at',{ascending:false});
+  body=(data||[]).map(o=>`<div class="box"><div class="row"><b>${E(o.name)} · ${F(o.total)}</b><select style="width:auto" onchange="sb.from('orders').update({status:this.value}).eq('id','${o.id}').then(()=>toast('Statut mis à jour'))">${['nouvelle','payée','en livraison','livrée','annulée'].map(s=>`<option ${s===o.status?'selected':''}>${s}</option>`).join('')}</select></div><small>${new Date(o.created_at).toLocaleString('fr-FR')} · <a href="tel:${E(o.phone)}">${E(o.phone)}</a> · ${E(o.zone)} · ${E(o.address)}<br>Paiement : ${E(o.method)} ${E(o.pay_ref||'')}</small><br>${o.items.map(i=>E(i.name)+' ×'+i.q).join(', ')}</div>`).join('')||'Aucune commande.'}
+ if(T==='zones')body=`<div class="box"><input id="z_n" placeholder="Zone (ex: Yopougon)"><input id="z_f" type="number" placeholder="Frais (FCFA)"><button class="btn" onclick="addz()">Ajouter la zone</button></div>`+S.zones.map(z=>`<div class="box row"><span>${E(z.name)} — ${F(z.fee)}</span><button class="btn r" onclick="del('zones','${z.id}')">Suppr.</button></div>`).join('');
+ $('#app').innerHTML=`<main><h2>Administration</h2><div class="tabs">${tabs.map(t=>`<button class="chip ${t[0]===T?'on':''}" onclick="S.tab='${t[0]}';admin()">${t[1]}</button>`).join('')}</div>${body}</main>`}
+function pform(id){const p=S.prods.find(x=>x.id===id)||{active:true,stock:10,category:'Ordinateurs portables'};
+ $('#pf').innerHTML=`<div class="box" style="margin-top:12px"><label>Nom</label><input id="f_n" value="${E(p.name)}"><label>Catégorie</label><input id="f_c" value="${E(p.category)}"><label>Description</label><textarea id="f_d" rows="3">${E(p.description)}</textarea>
+ <label>Prix (FCFA)</label><input id="f_p" type="number" value="${p.price||''}"><label>Ancien prix (optionnel)</label><input id="f_o" type="number" value="${p.old_price||''}"><label>Stock</label><input id="f_s" type="number" value="${p.stock}">
+ <label>Image (téléverser)</label><input id="f_i" type="file" accept="image/*"><label><input type="checkbox" id="f_a" ${p.active?'checked':''} style="width:auto"> Visible dans la boutique</label><br><br><button class="btn" onclick="psave('${id||''}','${E(p.image_url||'')}')">Enregistrer</button></div>`}
+async function psave(id,img){
+ const f=$('#f_i').files[0];let url=img;
+ if(f){const path=Date.now()+'-'+f.name.replace(/[^\w.]/g,'_'),{error}=await sb.storage.from('products').upload(path,f);if(error)return toast(error.message);url=sb.storage.from('products').getPublicUrl(path).data.publicUrl}
+ const row={name:$('#f_n').value,category:$('#f_c').value,description:$('#f_d').value,price:+$('#f_p').value||0,old_price:+$('#f_o').value||null,stock:+$('#f_s').value||0,active:$('#f_a').checked,image_url:url};
+ const{error}=id?await sb.from('products').update(row).eq('id',id):await sb.from('products').insert(row);
+ if(error)return toast(error.message);toast('Enregistré');await load();location.hash='#/admin'}
+async function addz(){const{error}=await sb.from('zones').insert({name:$('#z_n').value,fee:+$('#z_f').value||0});if(error)return toast(error.message);await load();location.hash='#/admin'}
+async function del(t,id){if(!confirm('Supprimer ?'))return;const{error}=await sb.from(t).delete().eq('id',id);if(error)return toast(error.message);await load();location.hash='#/admin'}
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+save();load();
+</script></body></html>
