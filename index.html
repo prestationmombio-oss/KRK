@@ -42,15 +42,16 @@ const isAdmin=()=>S.prof?.role==='admin';
 $('#wa').href='https://wa.me/'+CFG.WHATSAPP;
 $('#share').onclick=()=>{const d={title:'KRK Multi-Services',text:'Ordinateurs & cartes PVC — Bingerville',url:location.origin};navigator.share?navigator.share(d).catch(()=>{}):(navigator.clipboard.writeText(d.url),toast('Lien copié'))};
 
-async function load(){
+async function load(){try{await load0()}catch(e){console.error(e);toast('Connexion à la base impossible : vérifiez config.js')}route()}
+async function load0(){
  const[{data:p},{data:z}]=await Promise.all([sb.from('products').select('*').order('created_at',{ascending:false}),sb.from('zones').select('*').order('fee')]);
  S.prods=p||[];S.zones=z||[];
  const{data:{session}}=await sb.auth.getSession();S.user=session?.user||null;
  if(S.user){const{data}=await sb.from('profiles').select('*').eq('id',S.user.id).single();S.prof=data}
- $('#na').textContent=S.user?(isAdmin()?'Admin':'Compte'):'Connexion';route();
+ $('#na').textContent=S.user?(isAdmin()?'Admin':'Compte'):'Connexion';
 }
 function route(){const h=location.hash.slice(2)||'';document.querySelectorAll('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#/'+h));
- ({'':shop,cart,orders,account,admin})[h]?.call?.()||shop();scrollTo(0,0)}
+ ({'':shop,cart,orders,account,admin}[h]||shop)();scrollTo(0,0)}
 addEventListener('hashchange',route);
 
 function shop(){
@@ -97,7 +98,7 @@ function account(){
  $('#a_sw').onclick=e=>{e.preventDefault();up=!up;draw()};
  $('#a_go').onclick=async()=>{const email=$('#a_e').value,password=$('#a_w').value;
   const r=up?await sb.auth.signUp({email,password,options:{data:{full_name:$('#a_n').value,phone:$('#a_p').value}}}):await sb.auth.signInWithPassword({email,password});
-  if(r.error)return toast(r.error.message);if(up&&!r.data.session)return toast('Vérifiez votre email pour confirmer');await load();location.hash='#/'}};draw()}
+  if(r.error)return toast(r.error.message==='Failed to fetch'?'Base de données non configurée (config.js)':r.error.message);if(up&&!r.data.session)return toast('Vérifiez votre email pour confirmer');await load();location.hash='#/'}};draw()}
 
 async function admin(){
  if(!isAdmin()){location.hash='#/account';return}
